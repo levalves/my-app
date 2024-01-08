@@ -1,6 +1,6 @@
 #!/bin/bash
 set -eo pipefail
-set +x
+set -x
 
 if [ ! -d "$PWD/build-tools" ]; then
   git clone --single-branch --branch v1 git@github.com-levalves:levalves/build-tools.git "$PWD/build-tools"
@@ -77,9 +77,9 @@ f_get_region(){
 
 f_get_role() {
   if [ "$ENV" == "production" ]; then
-    ROLE="arn:aws:iam::327667905059:role/CrossAccount-Pagzoop_Prod"
+    ROLE="arn:aws:iam::000000000001:role/CrossAccount-levalves_Prod"
   else
-    ROLE="arn:aws:iam::327667905059:role/CrossAccount-Pagzoop_Prod"
+    ROLE="arn:aws:iam::000000000002:role/CrossAccount-levalves_Prod"
   fi
   echo $ROLE
 }
