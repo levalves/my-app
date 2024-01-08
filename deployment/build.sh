@@ -21,7 +21,6 @@ source "$__BUILD_TOOLS_PATH/scripts/aws_credentials.sh"
 
 COMMIT_HASH=${COMMIT_HASH:-$(git log --pretty=format:%h -n 1)}
 
-# CHANGE REPO NAME HERE
 REPO="pix-qrcode-$ENV"
 SECRET_NAME="pix-qrcode"
 
@@ -104,13 +103,13 @@ f_build_testplan() {
   terraform_testplan $ENV "$PWD/terraform" environments/$ENV.tfvars
 }
 
-  f_build_plan() {
-    f_terraform_init
-    f_get_role
-    set_aws_credentials $ROLE
-    export TF_VAR_build_version=$BUILD_NUMBER
-    terraform_plan $ENV "$PWD/terraform" $COMMIT_HASH environments/$ENV.tfvars
-  }
+f_build_plan() {
+  f_terraform_init
+  f_get_role
+  set_aws_credentials $ROLE
+  export TF_VAR_build_version=$BUILD_NUMBER
+  terraform_plan $ENV "$PWD/terraform" $COMMIT_HASH environments/$ENV.tfvars
+}
 
 f_post_apply() {
   SERVICE_NAME=$(terraform output ecs_service_name | cut -d"\"" -f2)
@@ -152,22 +151,10 @@ f_get_secrets_manager_value() {
   SLACK_TOKEN=$(echo $___SECRET_VALUE | jq --raw-output '.SLACK_TOKEN')
 }
 
-f_get_secrets() {
-	if [ "${ENV}" == "staging" ]; then
-		get_dd_secret "banking-$ENV" $REGION
-	else
-		get_dd_secret $ENV $REGION
-	fi
-
-	export DD_API_KEY=$___DD_API_KEY
-	export DD_AGENT_VERSION=$___DD_AGENT_VERSION
-}
-
 REPO_NAME=$(f_get_repo_name)
 IMAGE_TAG="$REPO_NAME:$COMMIT_HASH"
 
  f_build_artifact() {
-   f_setup_codeartifact_token
    echo "Building artifact in $(dirname $PWD)"
  }
 
@@ -175,11 +162,10 @@ f_docker_build_image() {
   f_create_ecr
   f_get_role
   set_aws_credentials $ROLE
-  f_setup_codeartifact_token
   REGION=$(f_get_region)
   ACCOUNT_ID=$(f_get_account_id)
   echo "Building image version: $BUILD_NUMBER"
-  build_image "$(dirname $PWD)/Dockerfile" $IMAGE_TAG $REGION "TOKEN=$CODEARTIFACT_AUTH_TOKEN"
+  build_image "$(dirname $PWD)/Dockerfile" $IMAGE_TAG $REGION
   set_aws_credentials $ROLE
 }
 
@@ -199,20 +185,6 @@ f_check_deployment() {
   CLUSTER= echo $CLUSTER | sed 's/ "//g;s/"//g'
   SERVICE_NAME= echo $SERVICE_NAME | sed 's/ "//g;s/"//g'
   check_deployment $REGION $CLUSTER $SERVICE_NAME 2400
-}
-
-f_setup_codeartifact_token() {
-  f_get_account_id
-  f_get_region
-  f_log "Setting Codeartifact token"
-  f_get_role
-  set_aws_credentials $ROLE
-  export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
-    --region "us-east-1" \
-    --domain pix-jd-sdk \
-    --query authorizationToken \
-    --output text \
-    --duration-seconds 900)
 }
 
 case "$1" in
